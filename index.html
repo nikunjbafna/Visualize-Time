@@ -26,19 +26,34 @@
 
         #IST {
             position: absolute;
-            transform: rotate(-157.5deg); 
+            transform: rotate(-157.5deg);
             /* the time difference between EST and IST*/
         }
 
         #hour {
             position: absolute;
-            
+
+        }
+
+        div.tip {
+            position: absolute;
+            text-align: center;
+            padding: 1rem;
+            background: #313639;
+            color: #f9f9f9;
+            border: px;
+            border-style: solid;
+            border-color: #141414;
+            border-radius: 0px 80px 80px 80px;
+            pointer-events: none;
+            font-size: 1rem;
+            font-family: 'Helvetica';
+            font-weight: bold;
         }
     </style>
 </head>
 
 <body>
-
     <!-- I divided my illustration into multiple SVGs so that I can manipulate each individually -->
 
     <div id="app">
@@ -54,7 +69,7 @@
     </div>
 
     <div id="EST">
-        <svg width="366" height="366" viewBox="0 0 366 366" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg id="ESTSVG" width="366" height="366" viewBox="0 0 366 366" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="183" cy="183" r="183" fill="#141414" />
             <path
                 d="M183 0C215.12 3.83027e-07 246.674 8.45404 274.492 24.5126C302.309 40.5711 325.41 63.6684 341.473 91.4834C357.536 119.298 365.995 150.851 366 182.971C366.005 215.091 357.556 246.647 341.502 274.467L183 183V0Z"
@@ -70,7 +85,7 @@
     </div>
 
     <div id="IST">
-        <svg width="228" height="228" viewBox="0 0 228 228" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg id="ISTSVG" width="228" height="228" viewBox="0 0 228 228" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
                 d="M114 1.52588e-05C134.009 1.54974e-05 153.666 5.26647 170.995 15.2701C188.324 25.2738 202.715 39.6623 212.721 56.9897C222.728 74.3171 227.997 93.973 228 113.982C228.003 133.991 222.74 153.649 212.739 170.979L114 114L114 1.52588e-05Z"
                 fill="#2A8BCB" />
@@ -86,9 +101,11 @@
 
     <div id="hour">
         <svg width="90" height="378" viewBox="0 0 90 378" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="45" cy="194.956" r="45" fill="#141414"/>
-            <path d="M34.3333 195C34.3333 200.891 39.109 205.667 45 205.667C50.891 205.667 55.6667 200.891 55.6667 195C55.6667 189.109 50.891 184.333 45 184.333C39.109 184.333 34.3333 189.109 34.3333 195ZM45 0.452995L33.453 12L45 23.547L56.547 12L45 0.452995ZM47 195L47 12L43 12L43 195L47 195Z" fill="white"/>
-            </svg>
+            <circle cx="45" cy="194.956" r="45" fill="#141414" />
+            <path
+                d="M34.3333 195C34.3333 200.891 39.109 205.667 45 205.667C50.891 205.667 55.6667 200.891 55.6667 195C55.6667 189.109 50.891 184.333 45 184.333C39.109 184.333 34.3333 189.109 34.3333 195ZM45 0.452995L33.453 12L45 23.547L56.547 12L45 0.452995ZM47 195L47 12L43 12L43 195L47 195Z"
+                fill="white" />
+        </svg>
     </div>
 
     <script type="module" async>
@@ -100,33 +117,112 @@
         const app = d3.select("#app");
         const second = d3.select("#second");
         const hour = d3.select("#hour");
+        const EST = d3.select("#ESTSVG");
+        const IST = d3.select("#ISTSVG");
+
 
         function loop() {
             const currentTime = new Date();
+            var ISTcurrentTime = new Date();
 
             const hours = currentTime.getHours();
             const minutes = currentTime.getMinutes();
             const seconds = currentTime.getSeconds();
+
+            // I converted the current time constructor to IST time using this thread: https://stackoverflow.com/questions/8207655/get-time-of-specific-timezone
+
+            function ISTgetTime() {
+                // convert to msec
+                // subtract local time zone offset
+                // get UTC time in msec
+                var utc = currentTime.getTime() + (currentTime.getTimezoneOffset() * 60000);
+
+                // create new Date object for different city
+                // using supplied offset
+                var ISTcurrentTime = new Date(utc + (3600000 * 5.5));
+
+                return ISTcurrentTime;
+            }
+
+            ISTcurrentTime = ISTgetTime();
+
+            const ISThours = ISTcurrentTime.getHours();
+            const ISTminutes = ISTcurrentTime.getMinutes();
+            const ISTseconds = ISTcurrentTime.getSeconds();
+
+            // console.log(ISTcurrentTime)
+            // console.log(ISThours)
 
             // Rotate the #second element
             const secondRotationAngle = seconds * 6;
             second.style("transform", `rotate(${secondRotationAngle}deg)`);
 
             // Rotate the #hour element
-            
             const hourRotationAngle = hours * 15; // 360 degrees/24 hours = 15
             const minuteRotationAngle = minutes * 0.25; // 360 degrees/24/60 = 0.25
-            
+
             hour.style("transform", `rotate(${hourRotationAngle + minuteRotationAngle}deg)`);
 
             // display.text(`${hour}:${minutes}:${seconds}`)
 
+            // Used mouseover function from https://medium.com/@kj_schmidt/show-data-on-mouse-over-with-d3-js-3bf598ff8fc2 and https://medium.com/@kj_schmidt/hover-effects-for-your-scatter-plot-447df80ea116
+            // Scale function used https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/scale
+
+            EST.on('mouseover', function (d, i) {
+                d3.select(this).transition()
+                    .duration('100')
+                    .attr('transform', 'scale(1.01)');
+                // console.log("Enter")
+                tip.transition()
+                    .style('background', '#A4508B')
+                    .duration(100)
+                    .style("opacity", 1);
+                tip.html(`EST ${hours}:${minutes}`)
+                    .style("top", (event.pageY) + "px")
+                    .style("left", (event.pageX) + "px")
+            })
+
+            EST.on('mouseout', function (d, i) {
+                d3.select(this).transition()
+                    .duration('100')
+                    .attr('transform', 'scale(1)');
+                tip.transition()
+                    .duration('200')
+                    .style("opacity", 0);
+            });
+
+            IST.on('mouseover', function (d, i) {
+                d3.select(this).transition()
+                    .duration('100')
+                    .attr('transform', 'scale(1.05)');
+                // console.log("Enter")
+                tip.transition()
+                    .style('background', '#0E6BA8')
+                    .duration(100)
+                    .style("opacity", 1);
+                tip.html(`IST ${ISThours}:${ISTminutes}`)
+                    .style("top", (event.pageY) + "px")
+                    .style("left", (event.pageX) + "px")
+            })
+
+            IST.on('mouseout', function (d, i) {
+                d3.select(this).transition()
+                    .duration('100')
+                    .attr('transform', 'scale(1)');
+                tip.transition()
+                    .duration('200')
+                    .style("opacity", 0);
+            });
+
             requestAnimationFrame(loop)
         }
 
+        var tip = d3.select("body").append("div")
+            .attr("class", "tip")
+            .style("opacity", 0);
+
         loop();
     </script>
-
 </body>
 
 </html>
